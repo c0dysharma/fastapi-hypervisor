@@ -3,6 +3,7 @@ from fastapi import FastAPI
 from contextlib import asynccontextmanager
 from loguru import logger
 from app.database import init_db
+from app.routes import router
 import os
 from dotenv import load_dotenv
 load_dotenv()
@@ -12,10 +13,11 @@ ENV = os.getenv("env", "dev")  # Default to "dev" if not set
 # Configure Loguru
 log_out_path = sys.stdout
 if ENV != "dev":
-  log_out_path = "app.log"
-  
+    log_out_path = "app.log"
+
 logger.remove()  # Remove the default logger
 logger.add(log_out_path, colorize=True, level="INFO")
+
 
 @asynccontextmanager
 async def lifespan(app: FastAPI):
@@ -25,6 +27,10 @@ async def lifespan(app: FastAPI):
     print("Shutting down...")
 
 app = FastAPI(lifespan=lifespan)
+
+# Include the router
+app.include_router(router)
+
 
 @app.get("/")
 async def read_root():
