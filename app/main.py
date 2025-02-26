@@ -1,11 +1,15 @@
-import sys
-from fastapi import FastAPI
-from contextlib import asynccontextmanager
-from loguru import logger
-from app.database import init_db
-from app.routes import router
 import os
+import sys
+from contextlib import asynccontextmanager
 from dotenv import load_dotenv
+from fastapi import FastAPI
+from loguru import logger
+
+from app.database import init_db
+from app.routes.user import router as user_router
+from app.routes.organisation import router as organisation_router
+from app.routes.organisation_member import router as organisation_member_router
+
 load_dotenv()
 
 ENV = os.getenv("env", "dev")  # Default to "dev" if not set
@@ -29,7 +33,9 @@ async def lifespan(app: FastAPI):
 app = FastAPI(lifespan=lifespan)
 
 # Include the router
-app.include_router(router)
+app.include_router(user_router)
+app.include_router(organisation_router)
+app.include_router(organisation_member_router)
 
 
 @app.get("/")
