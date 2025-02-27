@@ -1,3 +1,5 @@
+from sqlalchemy import table
+from sqlmodel import SQLModel
 import uuid
 from sqlmodel import SQLModel, Field, Relationship
 from typing import Optional, List
@@ -15,6 +17,9 @@ class User(SQLModel, table=True):
 class Cluster(SQLModel, table=True):
     id: str = Field(default_factory=lambda: str(
         uuid.uuid4()), primary_key=True)
+    organisation_id: str = Field(foreign_key="organisation.id")
+    organisation: Optional["Organisation"] = Relationship(
+        back_populates="clusters")
     name: str
     cpu: int
     ram: int
@@ -28,6 +33,7 @@ class Organisation(SQLModel, table=True):
     invite_code: str
     members: List["OrganisationMember"] = Relationship(
         back_populates="organisation")
+    clusters: List["Cluster"] = Relationship(back_populates="organisation")
 
 
 class OrganisationMember(SQLModel, table=True):

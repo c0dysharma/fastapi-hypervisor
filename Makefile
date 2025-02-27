@@ -2,6 +2,9 @@
 include .env
 export $(shell sed 's/=.*//' .env)
 
+# Declare phony targets
+.PHONY: run run-prod install update-requirements celery-worker celery-beat migrations migrate
+
 # =============== 🚀 FASTAPI SERVER ===============
 run:
 	uvicorn app.main:app --host 0.0.0.0 --port 8000 --reload
@@ -23,3 +26,10 @@ celery-worker:
 
 celery-beat:
 	celery -A app.celery_worker beat --loglevel=info
+
+# =============== 🗃️ DATABASE MIGRATIONS ===============
+migrations:
+	alembic revision --autogenerate
+
+migrate:
+	alembic upgrade head
