@@ -17,7 +17,7 @@ class UserInput(BaseModel):
     password: str
 
 
-@router.get("/user/{username}")
+@router.get("/users/{username}")
 async def get_user(username: str, session: SessionDep):
     user = session.exec(select(User).where(
         User.username == username)).first()
@@ -29,7 +29,7 @@ async def get_user(username: str, session: SessionDep):
     return user
 
 
-@router.post("/user")
+@router.post("/users")
 async def create_user(user: UserInput, session: SessionDep):
     found_user = session.exec(select(User).where(
         User.username == user.username)).first()

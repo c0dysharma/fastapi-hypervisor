@@ -20,7 +20,7 @@ class CreateOrganisationInput(BaseModel):
     user_id: str
 
 
-@router.post("/organisation")
+@router.post("/organisations")
 def create_organisation(args: CreateOrganisationInput, session: SessionDep):
     user = session.exec(select(User).where(
         User.id == args.user_id)).first()
@@ -48,7 +48,7 @@ def create_organisation(args: CreateOrganisationInput, session: SessionDep):
     return result
 
 
-@router.get("/organisation/{org_id}")
+@router.get("/organisations/{org_id}")
 async def get_organisation(org_id: str, session: SessionDep):
     organisation = session.exec(select(Organisation).where(
         Organisation.id == org_id)).first()

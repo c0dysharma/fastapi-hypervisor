@@ -1,6 +1,5 @@
 import os
 import sys
-from contextlib import asynccontextmanager
 from dotenv import load_dotenv
 from fastapi import FastAPI
 from loguru import logger
@@ -11,6 +10,8 @@ from app.routes.user import router as user_router
 from app.routes.organisation import router as organisation_router
 from app.routes.organisation_member import router as organisation_member_router
 from app.routes.cluster import router as cluster_router
+from app.routes.deployment import router as deployment_router
+from app.routes.resource import router as resource_router
 
 load_dotenv()
 
@@ -39,6 +40,8 @@ app.include_router(user_router)
 app.include_router(organisation_router)
 app.include_router(organisation_member_router)
 app.include_router(cluster_router)
+app.include_router(deployment_router)
+app.include_router(resource_router)
 
 
 @app.get("/")

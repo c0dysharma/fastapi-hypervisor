@@ -10,7 +10,7 @@ DATABASE_URL = os.getenv("DATABASE_URL", "sqlite:///./default.db")
 
 # Create database engine
 engine = create_engine(DATABASE_URL, connect_args={
-                       "check_same_thread": False}, echo=True)
+                       "check_same_thread": False})
 
 
 def get_session():

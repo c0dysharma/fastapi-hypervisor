@@ -16,7 +16,7 @@ class JoinOrganisationInput(BaseModel):
     role: str
 
 
-@router.post("/organisation_member")
+@router.post("/organisation_members")
 async def join_organisation(args: JoinOrganisationInput, session: SessionDep):
     organisation = session.exec(select(Organisation).where(
         Organisation.invite_code == args.invite_code)).first()

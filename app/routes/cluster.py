@@ -20,13 +20,13 @@ class ClusterInput(BaseModel):
     gpu: int
 
 
-@router.get("/cluster")
+@router.get("/clusters")
 def get_clusters(session: SessionDep):
     cluster = session.exec(select(Cluster)).all()
     return cluster
 
 
-@router.get("/cluster/{id}")
+@router.get("/clusters/{id}")
 def get_cluster(id: str, session: SessionDep):
     cluster = session.get(Cluster, id)
 
@@ -36,7 +36,7 @@ def get_cluster(id: str, session: SessionDep):
     return cluster
 
 
-@router.post("/cluster")
+@router.post("/clusters")
 def create_luster(args: ClusterInput, session: SessionDep):
     cluster = Cluster(name=args.name, cpu=args.cpu, ram=args.ram,
                       gpu=args.gpu, organisation_id=args.organisation_id)
@@ -45,6 +45,7 @@ def create_luster(args: ClusterInput, session: SessionDep):
     session.refresh(cluster)
 
     return {
+        "id": cluster.id,
         "name": cluster.name,
         "organisation_id": cluster.organisation_id,
         "cpu": cluster.cpu,
