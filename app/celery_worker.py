@@ -28,7 +28,7 @@ def test_task():
 
 
 @celery.task(bind=True)
-def process_deployment(self, deployment_id):
+def process_deployment(self, deployment_id: str):
     """
     Process a deployment request, handling resource allocation and execution.
     """

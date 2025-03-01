@@ -7,7 +7,6 @@ from app.clients.celery import celery_control
 
 
 PRIORITY_MAP = {
-
     "low": 0,
     "medium": 1,
     "high": 2
@@ -24,7 +23,7 @@ def get_priority_case():
     )
 
 
-def get_priority_value(priority):
+def get_priority_value(priority: str):
     """Convert a priority to its numeric value for comparison"""
     if priority is None:
         return DEFAULT_PRIORITY_VALUE
@@ -87,7 +86,7 @@ def get_cluster_resource_utilization():
     return result
 
 
-def find_lower_priority_running_deployments(priority):
+def find_lower_priority_running_deployments(priority: str):
     """
     Find deployments with lower priority than the given one that are currently running.
     """
@@ -126,7 +125,7 @@ def find_lower_priority_running_deployments(priority):
         return result
 
 
-def check_deployment_resources(deployment, cluster_resources):
+def check_deployment_resources(deployment: Deployment, cluster_resources: dict):
     """
     Check if there are enough resources for a deployment.
 
@@ -160,7 +159,7 @@ def check_deployment_resources(deployment, cluster_resources):
     return has_resources, available_cpu, available_ram, available_gpu
 
 
-def try_preemption(deployment, available_cpu, available_ram, available_gpu):
+def try_preemption(deployment: Deployment, available_cpu: int, available_ram: int, available_gpu: int):
     """
     Try to preempt lower priority deployments to free resources.
 
@@ -210,7 +209,7 @@ def try_preemption(deployment, available_cpu, available_ram, available_gpu):
     return preemption_success, preemptible_deployments
 
 
-def execute_preemption(preemptible_deployments, session):
+def execute_preemption(preemptible_deployments: list[Deployment], session: Session):
     """
     Preempt deployments to free resources.
 
@@ -235,7 +234,7 @@ def execute_preemption(preemptible_deployments, session):
     session.commit()
 
 
-def execute_deployment(deployment, session, simulation=True):
+def execute_deployment(deployment: Deployment, session: Session, simulation: bool = True):
     """
     Execute the deployment (or simulate it).
 
@@ -269,7 +268,7 @@ def execute_deployment(deployment, session, simulation=True):
         return handle_deployment_failure(deployment, session, e)
 
 
-def handle_deployment_failure(deployment, session, exception):
+def handle_deployment_failure(deployment: Deployment, session: Session, exception: Exception):
     """
     Handle a deployment failure.
 
