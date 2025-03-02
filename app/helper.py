@@ -1,4 +1,4 @@
-import datetime
+from datetime import datetime
 import time
 from sqlalchemy import Case
 from sqlmodel import select
