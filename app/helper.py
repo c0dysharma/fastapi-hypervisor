@@ -1,3 +1,4 @@
+import datetime
 import time
 from sqlalchemy import Case
 from sqlmodel import select
@@ -320,6 +321,7 @@ def execute_deployment(deployment: Deployment, session: Session, simulation: boo
 
         # Mark as completed
         deployment.status = DeploymentStatus.COMPLETED
+        deployment.completed_at = datetime.now()  # Set completion timestamp
         session.add(deployment)
         session.commit()
 
@@ -332,22 +334,6 @@ def execute_deployment(deployment: Deployment, session: Session, simulation: boo
 def handle_deployment_failure(deployment: Deployment, session: Session, exception: Exception):
     """
     Handle a deployment failure.
-
-    Implements the retry logic for failed deployments:
-    1. Updates the deployment status and failure reason
-    2. Increments the attempt counter
-    3. Schedules a retry if under the maximum attempt threshold
-
-    The retry policy provides resilience against transient failures
-    while preventing infinite retry loops for persistent issues.
-
-    Args:
-        deployment: Failed deployment
-        session: SQLModel session
-        exception: The exception that caused the failure
-
-    Returns:
-        str: Message about failure handling
     """
     from app.celery_worker import process_deployment  # Import here to avoid circular imports
 
