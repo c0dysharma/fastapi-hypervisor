@@ -132,6 +132,23 @@ Once running, access the API documentation:
 - **Resource Monitoring**: Track and visualize resource utilization
 - **Deployment Lifecycle Management**: Handle the full lifecycle of deployment jobs
 
+## Database Schema
+
+The FastAPI Hypervisor uses an SQLModel database with the following entity relationships:
+
+![Database Schema UML Diagram](docs/uml.png)
+
+### Key Entities:
+
+- **User**: System users who create deployments and belong to organizations
+- **Organisation**: Groups that own clusters and contain members
+- **OrganisationMember**: Join table connecting users to organizations with roles
+- **Cluster**: Compute resources with CPU, RAM, and GPU capacities
+- **Deployment**: Workloads that run on clusters with priority levels
+- **ClusterResourceSnapshot**: Historical resource utilization metrics
+
+For full details on model attributes and relationships, see the [models.py](app/models.py) file.
+
 ## Architecture
 
 The system consists of:
