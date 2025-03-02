@@ -1,17 +1,20 @@
 import time
-from sqlalchemy import Case, desc
+from sqlalchemy import Case
 from sqlmodel import select
 from app.database import Session, engine
 from app.models import Cluster, Deployment, DeploymentStatus
 from app.clients.celery import celery_control
 
 
+# Priority mapping for deployment scheduling
+# Higher numbers represent higher priority levels
 PRIORITY_MAP = {
     "low": 0,
     "medium": 1,
     "high": 2
 }
-DEFAULT_PRIORITY_VALUE = 1  # medium priority
+# medium priority is the default when priority is unspecified
+DEFAULT_PRIORITY_VALUE = 1
 
 
 def get_priority_case():
@@ -24,7 +27,16 @@ def get_priority_case():
 
 
 def get_priority_value(priority: str):
-    """Convert a priority to its numeric value for comparison"""
+    """
+    Convert a priority to its numeric value for comparison.
+
+    This handles different formats of priority values:
+    - String values ("high", "medium", "low")
+    - Enum values (DeploymentPriority.HIGH)
+    - None values (defaults to medium priority)
+
+    Returns the numeric priority value for comparison operations.
+    """
     if priority is None:
         return DEFAULT_PRIORITY_VALUE
 
@@ -44,7 +56,18 @@ def get_priority_value(priority: str):
 
 def get_cluster_resource_utilization():
     """
-    Calculate resource utilization by cluster.
+    Calculate and return current resource utilization for all clusters.
+
+    This function:
+    1. Retrieves all clusters from the database
+    2. For each cluster, finds all running and completed deployments
+    3. Calculates total resource usage (CPU, RAM, GPU)
+    4. Returns a structured dictionary with utilization data
+
+    The resulting data is used for:
+    - Making deployment decisions
+    - Resource monitoring
+    - Historical data collection
 
     Returns:
         dict: A dictionary with cluster_id as keys and resource information as values
@@ -89,6 +112,17 @@ def get_cluster_resource_utilization():
 def find_lower_priority_running_deployments(priority: str):
     """
     Find deployments with lower priority than the given one that are currently running.
+
+    This function is critical for the preemption system, which allows higher priority
+    deployments to take resources from lower priority ones when resources are scarce.
+
+    The function:
+    1. Gets all running deployments
+    2. Filters them by priority (lower than the input priority)
+    3. Sorts them by priority (lowest first) for optimal preemption
+
+    Returns:
+        List of Deployment objects with lower priority than the input priority
     """
     # Get the numeric value of the input priority
     input_priority_value = get_priority_value(priority)
@@ -129,9 +163,13 @@ def check_deployment_resources(deployment: Deployment, cluster_resources: dict):
     """
     Check if there are enough resources for a deployment.
 
+    This is the core function for determining if a deployment can run immediately
+    or needs to be queued/preempted. It compares the deployment's resource
+    requirements with the cluster's available resources.
+
     Args:
-        deployment: Deployment object
-        cluster_resources: Resource information for the cluster
+        deployment: Deployment object with resource requirements
+        cluster_resources: Resource information dictionary for the target cluster
 
     Returns:
         tuple: (has_resources, available_cpu, available_ram, available_gpu)
@@ -163,6 +201,14 @@ def try_preemption(deployment: Deployment, available_cpu: int, available_ram: in
     """
     Try to preempt lower priority deployments to free resources.
 
+    This function implements the preemption algorithm:
+    1. Find lower priority deployments that could be stopped
+    2. Calculate how many resources would be freed by stopping them
+    3. Determine if enough resources could be freed to run the new deployment
+
+    The algorithm is greedy, taking the lowest priority deployments first
+    until enough resources are available.
+
     Args:
         deployment: Deployment that needs resources
         available_cpu: Currently available CPU
@@ -170,7 +216,7 @@ def try_preemption(deployment: Deployment, available_cpu: int, available_ram: in
         available_gpu: Currently available GPU
 
     Returns:
-        tuple: (preemption_success, preempted_deployments)
+        tuple: (preemption_success, preemptible_deployments)
     """
     # Get resource requirements
     cpu_needed = deployment.requested_cpu
@@ -213,6 +259,13 @@ def execute_preemption(preemptible_deployments: list[Deployment], session: Sessi
     """
     Preempt deployments to free resources.
 
+    This function actually performs the preemption:
+    1. Sends revoke signals to the Celery tasks to stop them
+    2. Updates the database status of preempted deployments
+    3. Tracks preemption counts for analysis
+
+    The preemption is forceful (terminate=True) to free resources immediately.
+
     Args:
         preemptible_deployments: List of deployments to preempt
         session: SQLModel session
@@ -237,6 +290,14 @@ def execute_preemption(preemptible_deployments: list[Deployment], session: Sessi
 def execute_deployment(deployment: Deployment, session: Session, simulation: bool = True):
     """
     Execute the deployment (or simulate it).
+
+    In production, this would launch the actual container/workload.
+    For development, it simulates the deployment with timeouts.
+
+    The function handles:
+    1. Actual deployment execution
+    2. Status updates
+    3. Error handling and retries
 
     Args:
         deployment: Deployment to execute
@@ -271,6 +332,14 @@ def execute_deployment(deployment: Deployment, session: Session, simulation: boo
 def handle_deployment_failure(deployment: Deployment, session: Session, exception: Exception):
     """
     Handle a deployment failure.
+
+    Implements the retry logic for failed deployments:
+    1. Updates the deployment status and failure reason
+    2. Increments the attempt counter
+    3. Schedules a retry if under the maximum attempt threshold
+
+    The retry policy provides resilience against transient failures
+    while preventing infinite retry loops for persistent issues.
 
     Args:
         deployment: Failed deployment
