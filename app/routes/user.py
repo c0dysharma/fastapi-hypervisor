@@ -17,7 +17,16 @@ class UserInput(BaseModel):
     password: str
 
 
-@router.get("/users/{username}")
+class UserResponse(BaseModel):
+    id: str
+    username: str
+    # password intentionally omitted for security
+
+
+@router.get("/users/{username}",
+            response_model=UserResponse,
+            summary="Get user by username",
+            description="Retrieve a user's information by their username")
 async def get_user(username: str, session: SessionDep):
     user = session.exec(select(User).where(
         User.username == username)).first()
@@ -29,7 +38,10 @@ async def get_user(username: str, session: SessionDep):
     return user
 
 
-@router.post("/users")
+@router.post("/users",
+             response_model=UserResponse,
+             summary="Create new user",
+             description="Create a new user with the given username and password")
 async def create_user(user: UserInput, session: SessionDep):
     found_user = session.exec(select(User).where(
         User.username == user.username)).first()

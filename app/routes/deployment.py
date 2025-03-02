@@ -1,7 +1,8 @@
-from typing import Annotated, Optional
+from typing import Annotated, Optional, List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
+from datetime import datetime
 
 from app.database import get_session
 from app.models import Cluster, Deployment, DeploymentStatus
@@ -26,7 +27,49 @@ class DeploymentInput(BaseModel):
     requested_gpu: int
 
 
-@router.post("/deployments")
+class DeploymentResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    cluster_id: str
+    user_id: str
+    priority: str
+    requested_cpu: int
+    requested_ram: int
+    requested_gpu: int
+    status: str
+    was_preempted: bool
+    preempted_count: int
+    attempts: int
+    max_attempts: int
+    failure_reason: Optional[str] = None
+    started_at: Optional[datetime] = None
+    completed_at: Optional[datetime] = None
+
+
+class DeploymentCreateResponse(BaseModel):
+    id: str
+    name: str
+    description: Optional[str] = None
+    cluster_id: str
+    user_id: str
+    priority: str
+    requested_cpu: int
+    requested_ram: int
+    requested_gpu: int
+
+
+class DeploymentRetryResponse(BaseModel):
+    id: str
+    name: str
+    status: str
+    message: str
+
+
+@router.post("/deployments",
+             response_model=DeploymentCreateResponse,
+             summary="Create a new deployment",
+             description="Create a new deployment with specified resources and priority")
 def create_deployment(args: DeploymentInput, session: SessionDep):
     cluster = session.exec(select(Cluster).where(
         Cluster.id == args.cluster_id)).first()
@@ -67,14 +110,20 @@ def create_deployment(args: DeploymentInput, session: SessionDep):
     return result
 
 
-@router.get("/deployments")
+@router.get("/deployments",
+            response_model=List[DeploymentResponse],
+            summary="Get all deployments",
+            description="Retrieve a list of all deployments")
 def get_deployments(session: SessionDep):
     deployments = session.exec(select(Deployment)).all()
 
     return deployments
 
 
-@router.get(f"/deployments/{id}")
+@router.get("/deployments/{dep_id}",
+            response_model=DeploymentResponse,
+            summary="Get deployment by ID",
+            description="Retrieve details for a specific deployment by ID")
 def get_one_deployment(dep_id: str, session: SessionDep):
     deployment = session.exec(select(Deployment).where(
         Deployment.id == dep_id)).first()
@@ -85,7 +134,10 @@ def get_one_deployment(dep_id: str, session: SessionDep):
     return deployment
 
 
-@router.get("/deployments/{dep_id}/retry")
+@router.get("/deployments/{dep_id}/retry",
+            response_model=DeploymentRetryResponse,
+            summary="Retry a deployment",
+            description="Retry a deployment that was previously preempted, queued, or failed")
 def retry_deployment(dep_id: str, session: SessionDep):
     """
     Retry a deployment that was previously preempted, queued, or failed.
@@ -133,9 +185,9 @@ def retry_deployment(dep_id: str, session: SessionDep):
     process_deployment.apply_async(
         args=[deployment.id], task_id=deployment.id)
 
-    return {
-        "id": deployment.id,
-        "name": deployment.name,
-        "status": deployment.status,
-        "message": "Deployment queued for retry"
-    }
+    return DeploymentRetryResponse(
+        id=deployment.id,
+        name=deployment.name,
+        status=deployment.status,
+        message="Deployment queued for retry"
+    )

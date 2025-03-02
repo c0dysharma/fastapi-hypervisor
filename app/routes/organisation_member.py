@@ -1,4 +1,4 @@
-from typing import Annotated
+from typing import Annotated, List
 from fastapi import APIRouter, Depends, HTTPException
 from pydantic import BaseModel
 from sqlmodel import Session, select
@@ -16,7 +16,19 @@ class JoinOrganisationInput(BaseModel):
     role: str
 
 
-@router.post("/organisation_members")
+class OrganisationMemberResponse(BaseModel):
+    id: str
+    organisation_id: str
+    user_id: str
+    role: str
+    created_at: str
+    updated_at: str = None
+
+
+@router.post("/organisation_members",
+            response_model=OrganisationMemberResponse,
+            summary="Join an organization",
+            description="Join an organization using an invite code")
 async def join_organisation(args: JoinOrganisationInput, session: SessionDep):
     organisation = session.exec(select(Organisation).where(
         Organisation.invite_code == args.invite_code)).first()
